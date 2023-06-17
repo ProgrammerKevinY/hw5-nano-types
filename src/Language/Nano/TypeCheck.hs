@@ -131,9 +131,9 @@ extendState (InferState sub n) a t = InferState (extendSubst sub a t) n
 -- | Unify a type variable with a type; 
 --   if successful return an updated state, otherwise throw an error
 unifyTVar :: InferState -> TVar -> Type -> InferState
-unifyTVar st a t | a == (show t)            = st
-                 | a `elem` (freeTVars t) = throw ( Error ( "type error: cannot unify " ++ a ++ " and " ++ show t) )
-                 | otherwise              = extendState st a t 
+unifyTVar st a t | lookupTVar a (stSub st) == t = st
+                 | a `elem` (freeTVars t)       = throw ( Error ( "type error: cannot unify " ++ a ++ " and " ++ show t) )
+                 | otherwise                    = extendState st a t 
     
 -- | Unify two types;
 --   if successful return an updated state, otherwise throw an error
@@ -142,6 +142,7 @@ unify st (TVar t1) t2 | t1 `elem` (map fst (stSub st)) = st
                       | otherwise                      = unifyTVar st t1 t2
 unify st t1 (TVar t2) | t2 `elem` (map fst (stSub st)) = st
                       | otherwise                      = unifyTVar st t2 t1
+unify st (TList t1) (TList t2) = unify st t1 t2
 unify st (t1 :=> t3) (t2 :=> t4) = unify(unify(unify(unify st t1 t2)t2 t1)t3 t4)t4 t3 
 unify st t1 t2 | t1 == t2  = st
                | otherwise = throw ( Error ( "type error: cannot unify " ++ show t1 ++ " and " ++ show t2 ))
@@ -225,5 +226,5 @@ preludeTypes =
   , ("[]",   Forall "a" $ Mono ((TVar "a") :=> (TList (TVar "a"))))
   , (":",    Forall "a" $ Mono ((TVar "a") :=> (TList (TVar "a")) :=> (TList (TVar "a"))))
   , ("head", Forall "a" $ Mono ((TList (TVar "a")) :=> (TVar "a")))
-  , ("tail", Forall "a" $ Mono ((TList (TVar "a")) :=> (TVar "a")))
+  , ("tail", Forall "a" $ Mono ((TList (TVar "a")) :=> (TList (TVar "a"))))
   ]
