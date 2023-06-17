@@ -172,13 +172,13 @@ infer st gamma (EApp e1 e2)   = (newState, newType)
     newState                    = unify st e1Input e2Type
     (_, (e1Input :=> e1Output)) = infer st gamma e1
     (_, e2Type)                 = infer st gamma e2
-infer st gamma (ELet x e1 e2)  = (e2State, newType)
+infer st gamma (ELet x e1 e2) = (e2State, newType)
   where
     newType                    = apply newSub e2Type
-    newSub                     = stSub (e2State)
-    (e2State, e2Type)          = infer st extendedTypeEnv e2
+    newSub                     = stSub e1State
+    (e1State, e1Type)          = infer st extendedTypeEnv e1
     extendedTypeEnv            = extendTypeEnv x (Mono e1Type) gamma
-    (_, e1Type)                = infer st gamma e1
+    (e2State, e2Type)          = infer e1State extendedTypeEnv e2
 infer st gamma (EBin op e1 e2) = infer st gamma asApp
   where
     asApp = EApp (EApp opVar e1) e2
