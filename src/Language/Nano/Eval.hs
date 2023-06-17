@@ -167,12 +167,38 @@ exitError (Error msg) = return (VErr msg)
 --------------------------------------------------------------------------------
 eval :: Env -> Expr -> Value
 --------------------------------------------------------------------------------
-eval = error "TBD:eval"
+eval env (EInt i)       = VInt i -- Self explanatory
+eval env (EBool b)      = VBool b -- Self explanatory
+eval env (EVar x)       = lookupId x env -- Self explanatory
+eval env (EBin o e1 e2) = evalOp o (eval env e1) (eval env e2) -- Self explanatory
+eval env (EIf c t e)    | (eval env c) == VBool True  = eval env t -- Literally an If Statement
+                        | (eval env c) == VBool False = eval env e -- Literally an If Statement
+                        | otherwise                   = throw (Error "type error") -- If it's not a bool (Like if c is a VInt)
+eval env (ELet x e e')  = eval ([(x, eval env e)] ++ env) e' -- Adds (x:(eval e)) to the dict(env) & then evaluates it.
+eval env (EApp e1 e2) = case eval env e1 of -- e1 can be a function or not (Vprim or not)
+                            VClos oldFuncEnv id e1 -> eval ([(id, eval env e2)] ++ oldFuncEnv ++ env) e1 -- Unwraps a closure (I'm not gonna lie, this is hard and I'll forget so I'll write it down, eval ([newFunction parameter] ++ newFunctionEnvironment ++ OldEnvironment) e1]. Specifically for me ([x:2], Ctimes[c:42], oldEnv))
+                            -- ([x:2], Ctimes[c:42], oldEnv)
+                            VPrim e1 -> e1 (eval env e2) -- Vprim = Function so Vprim e1 == f = f(x)
+                            _ -> throw (Error "type error") -- Exhaustive
+eval env (ELam x e)     = VClos env x e -- Creates a Closure
+eval env ENil           = VNil -- Self explanatory
+eval _ _ = throw (Error "type error") -- Self explanatory (Exhaustive)
 
 --------------------------------------------------------------------------------
 evalOp :: Binop -> Value -> Value -> Value
 --------------------------------------------------------------------------------
-evalOp = error "TBD:evalOp"
+evalOp Plus  (VInt x) (VInt y)   = VInt(x + y) -- Simple Pattern Matching
+evalOp Minus (VInt x) (VInt y)   = VInt(x - y) -- ||   x = eval x env   || & same for y (Personal Note so I don't type it out 20 times)
+evalOp Mul   (VInt x) (VInt y)   = VInt(x * y) -- ||       y = 3        ||
+evalOp Div   (VInt x) (VInt y)   = VInt(x `div` y)
+evalOp Eq       x        y       = VBool(x == y)
+evalOp Ne       x        y       = VBool(x /= y)
+evalOp Lt    (VInt x) (VInt y)   = VBool(x < y)
+evalOp Le    (VInt x) (VInt y)   = VBool(x <= y)
+evalOp And   (VBool x) (VBool y) = VBool(x && y)
+evalOp Or    (VBool x) (VBool y) = VBool(x || y)
+evalOp Cons  x y                 = VPair x y
+evalOp _ _ _                     = throw (Error "type error") -- Exhaustive
 
 --------------------------------------------------------------------------------
 -- | `lookupId x env` returns the most recent
@@ -191,12 +217,17 @@ evalOp = error "TBD:evalOp"
 --------------------------------------------------------------------------------
 lookupId :: Id -> Env -> Value
 --------------------------------------------------------------------------------
-lookupId = error "TBD:lookupId"
+lookupId id []             = throw (Error ("unbound variable: " ++ id))
+lookupId id ((var,val):xs) = if id == var
+                                then val
+                                else lookupId id xs
 
 prelude :: Env
 prelude =
   [ -- HINT: you may extend this "built-in" environment
     -- with some "operators" that you find useful...
+    ("head", VPrim(\(VPair first second) -> first) ),
+    ("tail", VPrim(\(VPair first second) -> second) )
   ]
 
 env0 :: Env
